@@ -1,6 +1,8 @@
 import osmium
 import sys
 import copy
+import time
+
 # TODO
 # https://stackoverflow.com/questions/226693/python-disk-based-dictionary
 # use shelve.open() instead of dicts
@@ -213,10 +215,12 @@ if __name__ == "__main__":
     else:
         osm_file = OSM_FILE
     
+    start = time.time()
+
     intersections = IntersectionsHandler()
     print("Processing nodes")
     intersections.apply_file(osm_file)
-    intersections.apply_file("./sources/slovenia-latest.osm.pbf")
+    # intersections.apply_file("./sources/slovenia-latest.osm.pbf")
 
     # TODO this is a bit questionable how useful it is
     # for better memory consumption
@@ -225,17 +229,20 @@ if __name__ == "__main__":
     waterways = WaterwaysHandler(intersections.waterway_nodes)
     print("Processing ways")
     waterways.apply_file(osm_file)
-    waterways.apply_file("./sources/slovenia-latest.osm.pbf")
+    # waterways.apply_file("./sources/slovenia-latest.osm.pbf")
 
     rivers = RiverHandler()
     print("Processing relations")
     rivers.apply_file(osm_file)
-    rivers.apply_file("./sources/slovenia-latest.osm.pbf")
+    # rivers.apply_file("./sources/slovenia-latest.osm.pbf")
     
     confluence = ConfluenceHandler(intersections.waterway_nodes, waterways.body_nodes)
     print("Calculating confluence")
     confluence.apply_file(osm_file)
-    confluence.apply_file("./sources/slovenia-latest.osm.pbf")
+    # confluence.apply_file("./sources/slovenia-latest.osm.pbf")
+
+    end = time.time()
+    print(f"Took {end - start} s for parsing data from {osm_file}")
 
     # river_id = 350935692
     # print(confluence.confluences[confluence.waterway_to_confluence[river_id]])
@@ -250,5 +257,10 @@ if __name__ == "__main__":
     river_id = 863577658 # u sloveniji
     river_id = 438527470 # mirna
     river_id = 22702834 # sava
+    # river_id = 507633106 # amazon river
     # print(downstream(river_id, waterways))
+
+    start = time.time()
     print(local_confluence(river_id, waterways, rivers))
+    end = time.time()
+    print(f"Took {end - start} s to calculate local confluence for {river_id}")
