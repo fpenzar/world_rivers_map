@@ -63,9 +63,6 @@ class WaterwaysHandler(osmium.SimpleHandler):
             # only add nodes that have more than one waterway
             if n.ref not in self.waterway_nodes:
                 continue
-            # only add nodes that have more than one waterway
-            # if len(self.waterway_nodes[n.ref]) < 2:
-            #     continue
             self.body_nodes[w.id].append(n.ref)
         
         # append the last node
