@@ -2,6 +2,8 @@ import osmium
 import sys
 import copy
 import time
+import json
+from dictionary import dbdict
 
 # TODO
 # https://stackoverflow.com/questions/226693/python-disk-based-dictionary
@@ -30,15 +32,18 @@ class IntersectionsHandler(osmium.SimpleHandler):
     def __init__(self):
         osmium.SimpleHandler.__init__(self)
         # key=node_id, value=list(waterway_ids the node is present in)
-        self.waterway_nodes = {}
+        # self.waterway_nodes = {}
+        self.waterway_nodes = dbdict("waterway_nodes")
 
     def way(self, w):
         if not filter(w):
             return
         for n in w.nodes:
             if n.ref not in self.waterway_nodes:
-                self.waterway_nodes.update({n.ref: []})
-            self.waterway_nodes[n.ref].append(w.id)
+                # self.waterway_nodes.update({n.ref: []})
+                self.waterway_nodes[n.ref] = []
+            # self.waterway_nodes[n.ref].append(w.id)
+            self.waterway_nodes[n.ref] = self.waterway_nodes[n.ref].append(w.id)
 
 
 class WaterwaysHandler(osmium.SimpleHandler):
