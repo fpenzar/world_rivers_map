@@ -5,11 +5,8 @@ import time
 import json
 from dictionary import dbdict
 
-# TODO
-# https://stackoverflow.com/questions/226693/python-disk-based-dictionary
-# use shelve.open() instead of dicts
 
-OSM_FILE = "./sources/croatia-latest.osm.pbf"
+OSM_FILE = "./sources/south-america-latest.osm.pbf"
 
 CLASSES = ["river", "stream", "canal"]
 
@@ -18,6 +15,7 @@ CLASSES = ["river", "stream", "canal"]
 def clear_waterway_nodes(waterway_nodes):
     return {key: value for key, value in waterway_nodes.items() if len(value) >= 2}
 
+MAX = 1000000
 
 def filter(w):
     if w.is_closed() or w.tags.get("waterway") not in CLASSES:
@@ -33,21 +31,15 @@ class IntersectionsHandler(osmium.SimpleHandler):
         osmium.SimpleHandler.__init__(self)
         # key=node_id, value=list(waterway_ids the node is present in)
         # self.waterway_nodes = {}
-        self.waterway_nodes = dbdict("waterway_nodes")
+        self.waterway_nodes = dbdict("waterway_nodes", MAX)
 
     def way(self, w):
         if not filter(w):
             return
         for n in w.nodes:
             if n.ref not in self.waterway_nodes:
-                # self.waterway_nodes.update({n.ref: []})
                 self.waterway_nodes[n.ref] = []
-            # self.waterway_nodes[n.ref].append(w.id)
-            # print(self.waterway_nodes[n.ref])
             self.waterway_nodes[n.ref].append(w.id)
-            self.waterway_nodes.flush(n.ref)
-            # print(self.waterway_nodes[n.ref])
-            # self.waterway_nodes[n.ref] = self.waterway_nodes[n.ref].append(w.id)
 
 
 class WaterwaysHandler(osmium.SimpleHandler):
@@ -57,14 +49,16 @@ class WaterwaysHandler(osmium.SimpleHandler):
         # key=node_id, value=list(waterway_ids the node is present in)
         self.waterway_nodes = waterway_nodes
         # key=waterway_id, value=[start_node_id, intersection_node_1, intersection_node_2, ..., end_node_id]
-        self.body_nodes = {}
+        # self.body_nodes = {}
+        self.body_nodes = dbdict("body_nodes", MAX)
 
 
     def way(self, w):
         if not filter(w):
             return
         # add the start node
-        self.body_nodes.update({w.id: [w.nodes[0].ref]}) 
+        # self.body_nodes.update({w.id: [w.nodes[0].ref]})
+        self.body_nodes[w.id] = [w.nodes[0].ref]
         for index, n in enumerate(w.nodes):
             # skip first and last node as they are always added
             if index == 0 or index == len(w.nodes) - 1:
@@ -82,7 +76,8 @@ class RiverHandler(osmium.SimpleHandler):
     def __init__(self):
         osmium.SimpleHandler.__init__(self)
         # key=waterway_id, value=river_id
-        self.waterway_to_river = {}
+        # self.waterway_to_river = {}
+        self.waterway_to_river = dbdict("waterway_to_river", MAX)
     
 
     def relation(self, r):
@@ -103,15 +98,16 @@ class ConfluenceHandler(osmium.SimpleHandler):
         # key=waterway_id, value=[start_node_id, intersection_node_1, intersection_node_2, ..., end_node_id]
         self.body_nodes = body_nodes
         # key=id (from 0 upwards), value=list(waterway ids that are in the confluence)
-        self.confluences = {}
+        # self.confluences = {}
+        self.confluences = dbdict("confluences", MAX)
         # key=waterway_id, value=confluence_id
-        self.waterway_to_confluence = {}
+        # self.waterway_to_confluence = {}
+        self.waterway_to_confluence = dbdict("waterway_to_confluence", MAX)
         # confluence counter
         self.confluence_id_counter = 0
         # key=river_id, value=list(waterway ids that are in the river)
-        self.rivers = {}
-        # key=waterway_id, value=river_id
-        self.waterway_to_river = {}
+        # self.rivers = {}
+        self.rivers = dbdict("rivers", MAX)
     
 
     def way(self, w):
@@ -120,44 +116,46 @@ class ConfluenceHandler(osmium.SimpleHandler):
         if w.id in self.waterway_to_confluence:
             return
         
-        print(f"    {len(self.waterway_to_confluence)} / {len(self.body_nodes)} ({round(len(self.waterway_to_confluence) / len(self.body_nodes) * 100, 2)} %)", end="\r")
+        # print(f"    {len(self.waterway_to_confluence)} / {len(self.body_nodes)} ({round(len(self.waterway_to_confluence) / len(self.body_nodes) * 100, 2)} %)", end="\r")
         self.confluence_id_counter += 1
         open = {w.id}
         closed = set()
         while len(open):
             river = open.pop()
-            for node in self.body_nodes[river]:
+            for node in self.body_nodes.fast_get(river):
                 # only add nodes that have more than one waterway
                 if node not in self.waterway_nodes:
                     continue
-                for adjacent_river in self.waterway_nodes[node]:
+                for adjacent_river in self.waterway_nodes.fast_get(node):
                     if adjacent_river == river:
                         continue
                     if adjacent_river in closed or adjacent_river in open:
                         continue
                     open.add(adjacent_river)
             closed.add(river)
-            self.waterway_to_confluence.update({river: self.confluence_id_counter})
+            # self.waterway_to_confluence.update({river: self.confluence_id_counter})
+            self.waterway_to_confluence[river] = self.confluence_id_counter
 
-        self.confluences.update({self.confluence_id_counter: list(closed)})
+        # self.confluences.update({self.confluence_id_counter: list(closed)})
+        self.confluences[self.confluence_id_counter] = list(closed)
 
 
-def downstream(river_id, waterways: WaterwaysHandler):
+def downstream(river_id, waterway_nodes, body_nodes):
     open_waterways = {river_id}
     closed_waterways = set()
     while len(open_waterways):
         river = open_waterways.pop()
-        for node in waterways.body_nodes[river]:
+        for node in body_nodes.fast_get(river):
             # only process nodes that have more than one waterway
-            if node not in waterways.waterway_nodes:
+            if node not in waterway_nodes:
                 continue
-            for adjacent_river in waterways.waterway_nodes[node]:
+            for adjacent_river in waterway_nodes.fast_get(node):
                 if adjacent_river == river:
                     continue
                 if adjacent_river in closed_waterways or adjacent_river in open_waterways:
                     continue
                 # the node in question cannot be the end node of a river
-                adjacent_river_end_node = waterways.body_nodes[adjacent_river][-1]
+                adjacent_river_end_node = body_nodes.fast_get(adjacent_river)[-1]
                 if adjacent_river_end_node == node:
                     continue
                 open_waterways.add(adjacent_river)
@@ -165,46 +163,46 @@ def downstream(river_id, waterways: WaterwaysHandler):
     return closed_waterways
 
 
-def local_confluence(river_id, waterways: WaterwaysHandler, rivers: RiverHandler):
+def local_confluence(river_id, waterway_nodes, body_nodes, waterway_to_river):
     open_waterways = {river_id}
     closed_waterways = set()
     while len(open_waterways):
         waterway = open_waterways.pop()
-        for node in waterways.body_nodes[waterway]:
+        for node in body_nodes.fast_get(waterway):
             # only process nodes that have more than one waterway
-            if node not in waterways.waterway_nodes:
+            if node not in waterway_nodes:
                 continue
-            for adjacent_river in waterways.waterway_nodes[node]:
+            for adjacent_river in waterway_nodes.fast_get(node):
                 if adjacent_river == waterway:
                     continue
                 if adjacent_river in closed_waterways or adjacent_river in open_waterways:
                     continue
                 # add if the segment belongs to the same river_relation
-                if waterway in rivers.waterway_to_river and adjacent_river in rivers.waterway_to_river:
-                    if rivers.waterway_to_river[waterway] == rivers.waterway_to_river[adjacent_river]:
+                if waterway in waterway_to_river and adjacent_river in waterway_to_river:
+                    if waterway_to_river.fast_get(waterway) == waterway_to_river.fast_get(adjacent_river):
                         open_waterways.add(adjacent_river)
                         continue
 
                 # not end node case
-                if node != waterways.body_nodes[waterway][-1]:
+                if node != body_nodes.fast_get(waterway)[-1]:
                     # add if the shared node is adjacent_rivers end node
-                    if waterways.body_nodes[adjacent_river][-1] == node:
+                    if body_nodes.fast_get(adjacent_river)[-1] == node:
                         open_waterways.add(adjacent_river)
                         continue
                     continue
                 
                 # end node case
                 # skip if it is not the start node of the adjacent waterway
-                if waterways.body_nodes[adjacent_river][0] != node:
+                if body_nodes.fast_get(adjacent_river)[0] != node:
                     continue
                 # if it is end node of multiple waterways, then skip
                 multiple_end_node = False
-                for ww in waterways.waterway_nodes[node]:
+                for ww in waterway_nodes.fast_get(node):
                     if ww == waterway:
                         continue
                     if ww in closed_waterways or ww in open_waterways:
                         continue
-                    if waterways.body_nodes[ww][-1] == node:
+                    if body_nodes.fast_get(ww)[-1] == node:
                         multiple_end_node = True
                         break
                 if multiple_end_node:
@@ -221,34 +219,46 @@ if __name__ == "__main__":
     else:
         osm_file = OSM_FILE
     
-    start = time.time()
-
-    intersections = IntersectionsHandler()
-    print("Processing nodes")
-    intersections.apply_file(osm_file)
-    # intersections.apply_file("./sources/slovenia-latest.osm.pbf")
-
-    # TODO this is a bit questionable how useful it is
-    # for better memory consumption
-    intersections.waterway_nodes = clear_waterway_nodes(intersections.waterway_nodes)
-
-    waterways = WaterwaysHandler(intersections.waterway_nodes)
-    print("Processing ways")
-    waterways.apply_file(osm_file)
-    # waterways.apply_file("./sources/slovenia-latest.osm.pbf")
-
-    rivers = RiverHandler()
-    print("Processing relations")
-    rivers.apply_file(osm_file)
-    # rivers.apply_file("./sources/slovenia-latest.osm.pbf")
+    write = True
     
-    confluence = ConfluenceHandler(intersections.waterway_nodes, waterways.body_nodes)
-    print("Calculating confluence")
-    confluence.apply_file(osm_file)
-    # confluence.apply_file("./sources/slovenia-latest.osm.pbf")
+    if write:
+        start = time.time()
 
-    end = time.time()
-    print(f"Took {end - start} s for parsing data from {osm_file}")
+        intersections = IntersectionsHandler()
+        print("Processing nodes")
+        intersections.apply_file(osm_file)
+        # intersections.apply_file("./sources/slovenia-latest.osm.pbf")
+
+        # TODO this is a bit questionable how useful it is
+        # for better memory consumption
+        # intersections.waterway_nodes = clear_waterway_nodes(intersections.waterway_nodes)
+
+        waterways = WaterwaysHandler(intersections.waterway_nodes)
+        print("Processing ways")
+        waterways.apply_file(osm_file)
+        # waterways.apply_file("./sources/slovenia-latest.osm.pbf")
+
+        rivers = RiverHandler()
+        print("Processing relations")
+        rivers.apply_file(osm_file)
+        # rivers.apply_file("./sources/slovenia-latest.osm.pbf")
+        
+        confluence = ConfluenceHandler(intersections.waterway_nodes, waterways.body_nodes)
+        print("Calculating confluence")
+        confluence.apply_file(osm_file)
+        # confluence.apply_file("./sources/slovenia-latest.osm.pbf")
+
+        end = time.time()
+        print(f"Took {end - start} s for parsing data from {osm_file}")
+
+        waterway_nodes = intersections.waterway_nodes
+        body_nodes = waterways.body_nodes
+        waterway_to_river = rivers.waterway_to_river
+    else:
+        waterway_nodes = dbdict("waterway_nodes", MAX)
+        body_nodes = dbdict("body_nodes", MAX)
+        waterway_to_river = dbdict("waterway_to_river", MAX)
+
 
     # river_id = 350935692
     # print(confluence.confluences[confluence.waterway_to_confluence[river_id]])
@@ -263,10 +273,11 @@ if __name__ == "__main__":
     river_id = 863577658 # u sloveniji
     river_id = 438527470 # mirna
     river_id = 22702834 # sava
-    # river_id = 507633106 # amazon river
-    # print(downstream(river_id, waterways))
+    river_id = 507633106 # amazon river
+    # print(downstream(river_id, waterway_nodes, body_nodes))
 
     start = time.time()
-    print(local_confluence(river_id, waterways, rivers))
+    l_conf = local_confluence(river_id, waterway_nodes, body_nodes, waterway_to_river)
+    print(len(l_conf))
     end = time.time()
     print(f"Took {end - start} s to calculate local confluence for {river_id}")

@@ -130,3 +130,6 @@ dmypy.json
 
 # large files
 sources/
+
+# sqlite
+*.sqlite
