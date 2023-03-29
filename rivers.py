@@ -43,7 +43,11 @@ class IntersectionsHandler(osmium.SimpleHandler):
                 # self.waterway_nodes.update({n.ref: []})
                 self.waterway_nodes[n.ref] = []
             # self.waterway_nodes[n.ref].append(w.id)
-            self.waterway_nodes[n.ref] = self.waterway_nodes[n.ref].append(w.id)
+            # print(self.waterway_nodes[n.ref])
+            self.waterway_nodes[n.ref].append(w.id)
+            self.waterway_nodes.flush(n.ref)
+            # print(self.waterway_nodes[n.ref])
+            # self.waterway_nodes[n.ref] = self.waterway_nodes[n.ref].append(w.id)
 
 
 class WaterwaysHandler(osmium.SimpleHandler):
