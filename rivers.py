@@ -122,6 +122,7 @@ class ConfluenceHandler(osmium.SimpleHandler):
         closed = set()
         while len(open):
             river = open.pop()
+            # raised KeyError :( in self.body_node.fast_get
             for node in self.body_nodes.fast_get(river):
                 # only add nodes that have more than one waterway
                 if node not in self.waterway_nodes:
@@ -224,26 +225,34 @@ if __name__ == "__main__":
     if write:
         start = time.time()
 
-        intersections = IntersectionsHandler()
-        print("Processing nodes")
-        intersections.apply_file(osm_file)
-        # intersections.apply_file("./sources/slovenia-latest.osm.pbf")
+        # intersections = IntersectionsHandler()
+        # print("Processing nodes")
+        # intersections.apply_file(osm_file)
+        # # intersections.apply_file("./sources/slovenia-latest.osm.pbf")
 
-        # TODO this is a bit questionable how useful it is
-        # for better memory consumption
-        # intersections.waterway_nodes = clear_waterway_nodes(intersections.waterway_nodes)
+        # # TODO this is a bit questionable how useful it is
+        # # for better memory consumption
+        # # intersections.waterway_nodes = clear_waterway_nodes(intersections.waterway_nodes)
 
-        waterways = WaterwaysHandler(intersections.waterway_nodes)
-        print("Processing ways")
-        waterways.apply_file(osm_file)
-        # waterways.apply_file("./sources/slovenia-latest.osm.pbf")
+        # waterways = WaterwaysHandler(intersections.waterway_nodes)
+        # print("Processing ways")
+        # waterways.apply_file(osm_file)
+        # # waterways.apply_file("./sources/slovenia-latest.osm.pbf")
 
-        rivers = RiverHandler()
-        print("Processing relations")
-        rivers.apply_file(osm_file)
-        # rivers.apply_file("./sources/slovenia-latest.osm.pbf")
-        
-        confluence = ConfluenceHandler(intersections.waterway_nodes, waterways.body_nodes)
+        # rivers = RiverHandler()
+        # print("Processing relations")
+        # rivers.apply_file(osm_file)
+        # # rivers.apply_file("./sources/slovenia-latest.osm.pbf")
+
+        # waterway_nodes = intersections.waterway_nodes
+        # body_nodes = waterways.body_nodes
+        # waterway_to_river = rivers.waterway_to_river
+
+        waterway_nodes = dbdict("waterway_nodes", MAX)
+        body_nodes = dbdict("body_nodes", MAX)
+        waterway_to_river = dbdict("waterway_to_river", MAX)
+
+        confluence = ConfluenceHandler(waterway_nodes, body_nodes)
         print("Calculating confluence")
         confluence.apply_file(osm_file)
         # confluence.apply_file("./sources/slovenia-latest.osm.pbf")
@@ -251,9 +260,6 @@ if __name__ == "__main__":
         end = time.time()
         print(f"Took {end - start} s for parsing data from {osm_file}")
 
-        waterway_nodes = intersections.waterway_nodes
-        body_nodes = waterways.body_nodes
-        waterway_to_river = rivers.waterway_to_river
     else:
         waterway_nodes = dbdict("waterway_nodes", MAX)
         body_nodes = dbdict("body_nodes", MAX)
