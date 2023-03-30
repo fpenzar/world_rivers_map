@@ -6,12 +6,13 @@ import json
 from dictionary import dbdict
 
 
-OSM_FILE = "./sources/south-america-latest.osm.pbf"
+OSM_FILE = "./sources/croatia-latest.osm.pbf"
 
 CLASSES = ["river", "stream", "canal"]
 
 
 # only return nodes that have more than one waterway associted with them
+# TODO this should be cleared
 def clear_waterway_nodes(waterway_nodes):
     return {key: value for key, value in waterway_nodes.items() if len(value) >= 2}
 
@@ -225,32 +226,32 @@ if __name__ == "__main__":
     if write:
         start = time.time()
 
-        # intersections = IntersectionsHandler()
-        # print("Processing nodes")
-        # intersections.apply_file(osm_file)
-        # # intersections.apply_file("./sources/slovenia-latest.osm.pbf")
+        intersections = IntersectionsHandler()
+        print("Processing nodes")
+        intersections.apply_file(osm_file)
+        # intersections.apply_file("./sources/slovenia-latest.osm.pbf")
 
-        # # TODO this is a bit questionable how useful it is
-        # # for better memory consumption
-        # # intersections.waterway_nodes = clear_waterway_nodes(intersections.waterway_nodes)
+        # TODO
+        # for better memory consumption
+        # intersections.waterway_nodes = clear_waterway_nodes(intersections.waterway_nodes)
 
-        # waterways = WaterwaysHandler(intersections.waterway_nodes)
-        # print("Processing ways")
-        # waterways.apply_file(osm_file)
-        # # waterways.apply_file("./sources/slovenia-latest.osm.pbf")
+        waterways = WaterwaysHandler(intersections.waterway_nodes)
+        print("Processing ways")
+        waterways.apply_file(osm_file)
+        # waterways.apply_file("./sources/slovenia-latest.osm.pbf")
 
-        # rivers = RiverHandler()
-        # print("Processing relations")
-        # rivers.apply_file(osm_file)
-        # # rivers.apply_file("./sources/slovenia-latest.osm.pbf")
+        rivers = RiverHandler()
+        print("Processing relations")
+        rivers.apply_file(osm_file)
+        # rivers.apply_file("./sources/slovenia-latest.osm.pbf")
 
-        # waterway_nodes = intersections.waterway_nodes
-        # body_nodes = waterways.body_nodes
-        # waterway_to_river = rivers.waterway_to_river
+        waterway_nodes = intersections.waterway_nodes
+        body_nodes = waterways.body_nodes
+        waterway_to_river = rivers.waterway_to_river
 
-        waterway_nodes = dbdict("waterway_nodes", MAX)
-        body_nodes = dbdict("body_nodes", MAX)
-        waterway_to_river = dbdict("waterway_to_river", MAX)
+        # waterway_nodes = dbdict("waterway_nodes", MAX)
+        # body_nodes = dbdict("body_nodes", MAX)
+        # waterway_to_river = dbdict("waterway_to_river", MAX)
 
         confluence = ConfluenceHandler(waterway_nodes, body_nodes)
         print("Calculating confluence")
@@ -279,8 +280,11 @@ if __name__ == "__main__":
     river_id = 863577658 # u sloveniji
     river_id = 438527470 # mirna
     river_id = 22702834 # sava
-    river_id = 507633106 # amazon river
-    # print(downstream(river_id, waterway_nodes, body_nodes))
+    # river_id = 507633106 # amazon river
+    start = time.time()
+    print(downstream(river_id, waterway_nodes, body_nodes))
+    end = time.time()
+    print(f"Took {end - start} s to calculate downstream for {river_id}")
 
     start = time.time()
     l_conf = local_confluence(river_id, waterway_nodes, body_nodes, waterway_to_river)

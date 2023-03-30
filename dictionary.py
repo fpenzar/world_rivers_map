@@ -99,6 +99,12 @@ class dbdict():
             self.con.commit()
         if not exists:
              raise KeyError
+    
+
+    # TODO
+    def clear_waterway_nodes(self):
+        # clear waterway nodes that only contain a single element in the array for the value
+        ...
 
             
     def keys(self):
