@@ -1,12 +1,14 @@
 import osmium
 import sys
-import copy
 import time
-import json
 from dictionary import dbdict
 
 
-OSM_FILE = "./sources/croatia-latest.osm.pbf"
+FILE = "croatia-latest.osm"
+PREFIX = "/home/geolux/tiles/world_rivers_map"
+OSM_FILE = f"{PREFIX}/sources/{FILE}.pbf"
+OSM_FILE_TRANSFORMED = f"{PREFIX}/transformed/{FILE}"
+CSV_FILE = "/home/geolux/tiles/world_rivers_map/confluences.csv"
 
 CLASSES = ["river", "stream", "canal"]
 
@@ -16,7 +18,7 @@ CLASSES = ["river", "stream", "canal"]
 def clear_waterway_nodes(waterway_nodes):
     return {key: value for key, value in waterway_nodes.items() if len(value) >= 2}
 
-MAX = 1000000
+MAX = 1000
 
 def filter(w):
     if w.is_closed() or w.tags.get("waterway") not in CLASSES:
@@ -31,8 +33,8 @@ class IntersectionsHandler(osmium.SimpleHandler):
     def __init__(self):
         osmium.SimpleHandler.__init__(self)
         # key=node_id, value=list(waterway_ids the node is present in)
-        # self.waterway_nodes = {}
-        self.waterway_nodes = dbdict("waterway_nodes", MAX)
+        self.waterway_nodes = {}
+        # self.waterway_nodes = dbdict("waterway_nodes", MAX)
 
     def way(self, w):
         if not filter(w):
@@ -88,12 +90,12 @@ class RiverHandler(osmium.SimpleHandler):
             self.waterway_to_river[member.ref] = r.id
 
 
-# this is eating up most of the memory
 class ConfluenceHandler(osmium.SimpleHandler):
     # calculate confluences
 
-    def __init__(self, waterway_nodes, body_nodes):
+    def __init__(self, waterway_nodes, body_nodes, csv):
         osmium.SimpleHandler.__init__(self)
+        self.csv = csv
         # key=node_id, value=list(waterway_ids the node is present in)
         self.waterway_nodes = waterway_nodes
         # key=waterway_id, value=[start_node_id, intersection_node_1, intersection_node_2, ..., end_node_id]
@@ -105,30 +107,32 @@ class ConfluenceHandler(osmium.SimpleHandler):
         # self.waterway_to_confluence = {}
         self.waterway_to_confluence = dbdict("waterway_to_confluence", MAX)
         # confluence counter
-        self.confluence_id_counter = 0
-        # key=river_id, value=list(waterway ids that are in the river)
-        # self.rivers = {}
-        self.rivers = dbdict("rivers", MAX)
+        self.confluence_id_counter = 0    
+
+
+    def write_confluence(self, w_id, confluence_id):
+        self.csv.write(f"{w_id},{confluence_id}\n")
     
 
     def way(self, w):
         if not filter(w):
             return
         if w.id in self.waterway_to_confluence:
+            self.write_confluence(w.id, self.waterway_to_confluence[w.id])
             return
         
-        # print(f"    {len(self.waterway_to_confluence)} / {len(self.body_nodes)} ({round(len(self.waterway_to_confluence) / len(self.body_nodes) * 100, 2)} %)", end="\r")
         self.confluence_id_counter += 1
         open = {w.id}
         closed = set()
         while len(open):
             river = open.pop()
-            # raised KeyError :( in self.body_node.fast_get
             for node in self.body_nodes.fast_get(river):
+            # for node in self.body_nodes[river]:
                 # only add nodes that have more than one waterway
                 if node not in self.waterway_nodes:
                     continue
-                for adjacent_river in self.waterway_nodes.fast_get(node):
+                # for adjacent_river in self.waterway_nodes.fast_get(node):
+                for adjacent_river in self.waterway_nodes[node]:
                     if adjacent_river == river:
                         continue
                     if adjacent_river in closed or adjacent_river in open:
@@ -140,6 +144,11 @@ class ConfluenceHandler(osmium.SimpleHandler):
 
         # self.confluences.update({self.confluence_id_counter: list(closed)})
         self.confluences[self.confluence_id_counter] = list(closed)
+        print(self.confluence_id_counter)
+        print(list(closed))
+        print("########################")
+        self.write_confluence(w.id, self.confluence_id_counter)
+
 
 
 def downstream(river_id, waterway_nodes, body_nodes):
@@ -253,10 +262,11 @@ if __name__ == "__main__":
         # body_nodes = dbdict("body_nodes", MAX)
         # waterway_to_river = dbdict("waterway_to_river", MAX)
 
-        confluence = ConfluenceHandler(waterway_nodes, body_nodes)
-        print("Calculating confluence")
-        confluence.apply_file(osm_file)
-        # confluence.apply_file("./sources/slovenia-latest.osm.pbf")
+        with open(CSV_FILE, "a") as csv:
+            confluence = ConfluenceHandler(waterway_nodes, body_nodes, csv)
+            print("Calculating confluence")
+            confluence.apply_file(osm_file)
+            # confluence.apply_file("./sources/slovenia-latest.osm.pbf")
 
         end = time.time()
         print(f"Took {end - start} s for parsing data from {osm_file}")
@@ -267,27 +277,18 @@ if __name__ == "__main__":
         waterway_to_river = dbdict("waterway_to_river", MAX)
 
 
-    # river_id = 350935692
-    # print(confluence.confluences[confluence.waterway_to_confluence[river_id]])
-    # print(len(confluence.confluences))
-    # print(f"waterway_to_confluence: {len(confluence.waterway_to_confluence)}")
-    # print(f"confluences: {len(confluence.confluences)}")
-    # print(f"body_nodes: {len(waterways.body_nodes)}")
-    # print(f"waterway_nodes: {len(intersections.waterway_nodes)}")
-
-
     river_id = 350935692 # Bračana
     river_id = 863577658 # u sloveniji
     river_id = 438527470 # mirna
     river_id = 22702834 # sava
     # river_id = 507633106 # amazon river
     start = time.time()
-    print(downstream(river_id, waterway_nodes, body_nodes))
-    end = time.time()
-    print(f"Took {end - start} s to calculate downstream for {river_id}")
+    # print(downstream(river_id, waterway_nodes, body_nodes))
+    # end = time.time()
+    # print(f"Took {end - start} s to calculate downstream for {river_id}")
 
-    start = time.time()
-    l_conf = local_confluence(river_id, waterway_nodes, body_nodes, waterway_to_river)
-    print(len(l_conf))
+    # start = time.time()
+    # l_conf = local_confluence(river_id, waterway_nodes, body_nodes, waterway_to_river)
+    # print(len(l_conf))
     end = time.time()
     print(f"Took {end - start} s to calculate local confluence for {river_id}")
