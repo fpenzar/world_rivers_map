@@ -133,3 +133,4 @@ sources/
 
 # sqlite
 *.sqlite
+*-journal
