@@ -1,15 +1,15 @@
 import os, os.path
 from sqlite3 import dbapi2 as sqlite
 import json
-from functools import lru_cache
+import time
 
 # TODO waay to much db access
 # code modified from: http://sebsauvage.net/python/snyppets/index.html#dbdict
 
 class dbdict():
    
-    def __init__(self,dictName, max_elements=10000):
-        self.db_filename = "dbdict_%s.sqlite" % dictName
+    def __init__(self, path, max_elements=10000):
+        self.db_filename = path
         self._write_dict = dict()
         self.max_elements = max_elements
         if not os.path.isfile(self.db_filename):
@@ -17,7 +17,7 @@ class dbdict():
             self.con.execute("create table data (key PRIMARY KEY,value)")
         else:
             self.con = sqlite.connect(self.db_filename)
-
+        
 
     def __getitem__(self, key):
         # returns a reference from the _write_dict
@@ -34,7 +34,6 @@ class dbdict():
         return result
     
 
-    @lru_cache(maxsize=100000)
     def fast_get(self, key):
         # the result should not be modified
         if key in self._write_dict:
@@ -42,13 +41,11 @@ class dbdict():
         else:
             row = self.con.execute("select value from data where key=?", (key,)).fetchone()
             if not row:
-                print(key) 
                 raise KeyError
             result = json.loads(row[0])
         return result
 
 
-    @lru_cache(maxsize=100000)
     def __contains__(self, key):
         # check in cache first
         if key in self._write_dict:
@@ -98,7 +95,5 @@ class dbdict():
     
 
     def __del__(self):
-        for dict_key, dict_value in self._write_dict.items():
-            self.con.execute("insert or replace into data (key,value) values (?,?)", (dict_key, json.dumps(dict_value)))
-        self.con.commit()
+        self.flush()
         self.con.close()
