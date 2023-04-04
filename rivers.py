@@ -197,7 +197,7 @@ class LocalConfluenceHandler(osmium.SimpleHandler):
         if river_id in self.river_to_local_confluence:
             return
         confluence = local_confluence(w.id, self.node_to_waterways, self.waterway_to_nodes, 
-                                      self.waterway_to_river, self.river_to_local_confluence)
+                                      self.waterway_to_river, self.river_to_waterways, self.river_to_local_confluence)
         self.river_to_local_confluence[river_id] = confluence
         self.processed += 1
 
@@ -208,7 +208,7 @@ if __name__ == "__main__":
     else:
         osm_file = OSM_FILE
     
-    write = False
+    write = True
     
     if write:
         start = time.time()
@@ -276,8 +276,8 @@ if __name__ == "__main__":
     print(f"Took {end - start} s to calculate downstream for {river_id}")
 
     start = time.time()
-    l_conf = local_confluence(river_id, node_to_waterways, waterway_to_nodes, waterway_to_river,
-                               river_to_local_confluence)
+    l_conf = local_confluence(river_id, node_to_waterways, waterway_to_nodes, 
+                              waterway_to_river, river_to_waterways,river_to_local_confluence)
     print(l_conf)
     print(len(l_conf))
     end = time.time()

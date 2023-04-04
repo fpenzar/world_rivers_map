@@ -74,22 +74,39 @@ def local_confluence_old(river_id, node_to_waterways, waterway_to_nodes, waterwa
 
 
 def local_confluence(waterway_id, node_to_waterways, waterway_to_nodes, 
-                     waterway_to_river, river_to_local_confluence):
+                     waterway_to_river, river_to_waterways, river_to_local_confluence):
     if waterway_id not in waterway_to_nodes:
         return []
     open_waterways = {waterway_id}
     closed_waterways = set()
     while len(open_waterways):
         waterway = open_waterways.pop()
+
+        # this if only happens when only parts of the world are generated
+        # and the river exceeds the borders
+        if waterway not in waterway_to_nodes:
+            closed_waterways.add(waterway)
+            continue
         
-        # if the waterway belongs to another river
+        # if the waterway belongs to a river
         if waterway in waterway_to_river:
             river_id = waterway_to_river.fast_get(waterway)
-            # add the whole local confluence
+            # add the whole local confluence if calcualted
             if river_id in river_to_local_confluence:
                 for tributary in river_to_local_confluence.fast_get(river_id):
+                    if tributary in open_waterways:
+                        continue
                     closed_waterways.add(tributary)
                 continue
+            # add the whole river
+            else:
+                for ww in river_to_waterways.fast_get(river_id):
+                    if ww == waterway:
+                        continue
+                    if ww in open_waterways or ww in closed_waterways:
+                        continue
+                    open_waterways.add(ww)
+
 
         for node in waterway_to_nodes.fast_get(waterway):
             # only process nodes that have more than one waterway
@@ -101,17 +118,16 @@ def local_confluence(waterway_id, node_to_waterways, waterway_to_nodes,
                 if adjacent_river in closed_waterways or adjacent_river in open_waterways:
                     continue
                 # add if the segment belongs to the same river_relation
-                if waterway in waterway_to_river and adjacent_river in waterway_to_river:
-                    if waterway_to_river.fast_get(waterway) == waterway_to_river.fast_get(adjacent_river):
-                        open_waterways.add(adjacent_river)
-                        continue
+                # if waterway in waterway_to_river and adjacent_river in waterway_to_river:
+                #     if waterway_to_river.fast_get(waterway) == waterway_to_river.fast_get(adjacent_river):
+                #         open_waterways.add(adjacent_river)
+                #         continue
 
                 # not end node case
                 if node != waterway_to_nodes.fast_get(waterway)[-1]:
                     # add if the shared node is adjacent_rivers end node
                     if waterway_to_nodes.fast_get(adjacent_river)[-1] == node:
                         open_waterways.add(adjacent_river)
-                        continue
                     continue
                 
                 # end node case
