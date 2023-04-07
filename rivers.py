@@ -3,18 +3,9 @@ import sys
 import time
 from db_dict import dbdict
 from relations import local_confluence, downstream, local_confluence_old
+import os
+from consts import *
 
-
-FILE = "croatia-latest.osm"
-PREFIX = "."
-OSM_FILE = f"{PREFIX}/sources/{FILE}.pbf"
-CSV_FILE = f"{PREFIX}/confluences.csv"
-
-CLASSES = ["river", "stream", "canal"]
-
-
-MAX = 1000
-VERBOSE = False
 
 def filter(w):
     if w.is_closed() or w.tags.get("waterway") not in CLASSES:
@@ -121,6 +112,10 @@ class ConfluenceHandler(osmium.SimpleHandler):
 
 
     def write_confluence(self, w_id, confluence_id):
+        # write the river to a file corresponding to the first two digits
+        # first_two_digits_str = str(w_id)[:2]
+        # with open(f"{CSV_FOLDER}/{first_two_digits_str}.csv", "a") as file:
+        #     file.write(f"{w_id},{confluence_id}\n")
         self.csv.write(f"{w_id},{confluence_id}\n")
     
 
@@ -194,9 +189,11 @@ class LocalConfluenceHandler(osmium.SimpleHandler):
         self.processed += 1
 
 
-if __name__ == "__main__":
-    if len(sys.argv) == 2:
+def test():
+    if len(sys.argv) >= 2:
         osm_file = sys.argv[1]
+        if len(sys.argv) == 3:
+            VERBOSE = (sys.argv[2] == "true" or sys.argv[2] == "True" or sys.argv[2] == "1")
     else:
         osm_file = OSM_FILE
     
@@ -276,3 +273,62 @@ if __name__ == "__main__":
     print(len(l_conf_old))
     end = time.time()
     print(f"Took {end - start} s to calculate local confluence (old) for {river_id}")
+
+
+def write():
+    files = os.listdir(sys.argv[1])
+    files = [os.path.join(sys.argv[1], file) for file in files]
+
+    start = time.time()
+    # intersections
+    intersections = IntersectionsHandler()
+    print("Processing nodes")
+    for i, osm_file in enumerate(files):
+        print(f" {i + 1}/{len(files)}", end="\r")
+        intersections.apply_file(osm_file)
+    
+    # waterways
+    waterways = WaterwaysHandler(intersections.node_to_waterways)
+    print("Processing ways")
+    for i, osm_file in enumerate(files):
+        print(f" {i + 1}/{len(files)}", end="\r")
+        waterways.apply_file(osm_file)
+    
+    # rivers
+    rivers = RiverHandler()
+    print("Processing relations")
+    for i, osm_file in enumerate(files):
+        print(f" {i + 1}/{len(files)}", end="\r")
+        rivers.apply_file(osm_file)
+    
+
+    node_to_waterways = intersections.node_to_waterways
+    waterway_to_nodes = waterways.waterway_to_nodes
+    waterway_to_river = rivers.waterway_to_river
+    river_to_waterways = rivers.river_to_waterways
+
+    # local confluences
+    local_confluence_handler = LocalConfluenceHandler(node_to_waterways, waterway_to_nodes, waterway_to_river, river_to_waterways)
+    print("Calculating local confluences")
+    for i, osm_file in enumerate(files):
+        print(f" {i + 1}/{len(files)}", end="\r")
+        local_confluence_handler.apply_file(osm_file)
+    river_to_local_confluence = local_confluence_handler.river_to_local_confluence
+
+
+    # global confluences
+    with open(CSV_FILE, "w") as csv:
+        confluence = ConfluenceHandler(node_to_waterways, waterway_to_nodes, csv)
+        print("Calculating global confluences")
+        for i, osm_file in enumerate(files):
+            print(f" {i + 1}/{len(files)}", end="\r")
+            confluence.apply_file(osm_file)
+    
+    end = time.time()
+    print(f"Took {end - start} s for parsing data")
+
+
+if __name__ == "__main__":
+    write()
+    # test()
+    

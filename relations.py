@@ -117,11 +117,6 @@ def local_confluence(waterway_id, node_to_waterways, waterway_to_nodes,
                     continue
                 if adjacent_river in closed_waterways or adjacent_river in open_waterways:
                     continue
-                # add if the segment belongs to the same river_relation
-                # if waterway in waterway_to_river and adjacent_river in waterway_to_river:
-                #     if waterway_to_river.fast_get(waterway) == waterway_to_river.fast_get(adjacent_river):
-                #         open_waterways.add(adjacent_river)
-                #         continue
 
                 # not end node case
                 if node != waterway_to_nodes.fast_get(waterway)[-1]:

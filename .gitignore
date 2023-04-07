@@ -134,3 +134,9 @@ sources/
 # sqlite
 *.sqlite
 *-journal
+
+# csv
+*.csv
+
+# osm files
+*.osm.pbf

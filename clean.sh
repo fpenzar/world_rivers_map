@@ -1,2 +1,3 @@
 rm -rf *.sqlite
-rm confluences.csv
+rm csv/*.csv
+rm *.csv

@@ -1,13 +1,14 @@
 import os, os.path
 from sqlite3 import dbapi2 as sqlite
 import json
+from consts import *
 
 # code modified from: http://sebsauvage.net/python/snyppets/index.html#dbdict
 
 class dbdict():
    
     def __init__(self, path, max_elements=10000, check_same_thread=True):
-        self.db_filename = "dict_db_" + path + ".sqlite"
+        self.db_filename = f"{PREFIX}/dict_db_" + path + ".sqlite"
         self._write_dict = dict()
         self.max_elements = max_elements
         if not os.path.isfile(self.db_filename):
