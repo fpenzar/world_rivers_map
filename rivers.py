@@ -34,6 +34,10 @@ class IntersectionsHandler(osmium.SimpleHandler):
                 self.node_to_waterways[n.ref] = []
             self.node_to_waterways[n.ref].append(w.id)
         self.processed += 1
+    
+
+    def clear_redundant_nodes(self):
+        self.node_to_waterways.clear_redundant_nodes()
 
 
 class WaterwaysHandler(osmium.SimpleHandler):
@@ -94,11 +98,13 @@ class RiverHandler(osmium.SimpleHandler):
 class ConfluenceHandler(osmium.SimpleHandler):
     # calculate confluences
 
-    def __init__(self, node_to_waterways, waterway_to_nodes, csv):
+    def __init__(self, node_to_waterways, waterway_to_nodes, csv, waterway_to_river, river_to_waterways):
         osmium.SimpleHandler.__init__(self)
         self.csv = csv
         # key=node_id, value=list(waterway_ids the node is present in)
         self.node_to_waterways = node_to_waterways
+        self.waterway_to_river = waterway_to_river
+        self.river_to_waterways = river_to_waterways
         # key=waterway_id, value=[start_node_id, intersection_node_1, intersection_node_2, ..., end_node_id]
         self.waterway_to_nodes = waterway_to_nodes
         # key=id (from 0 upwards), value=list(waterway ids that are in the confluence)
@@ -107,6 +113,7 @@ class ConfluenceHandler(osmium.SimpleHandler):
         self.waterway_to_confluence = dbdict("waterway_to_confluence", MAX)
         # confluence counter
         self.confluence_id_counter = 0
+
 
         self.processed = 0
 
@@ -132,20 +139,36 @@ class ConfluenceHandler(osmium.SimpleHandler):
         open = {w.id}
         closed = set()
         while len(open):
-            river = open.pop()
-            for node in self.waterway_to_nodes.fast_get(river):
+            waterway = open.pop()
+
+            # this only happens when only parts of the world are generated
+            # and the river exceeds the borders
+            if waterway not in self.waterway_to_nodes:
+                closed.add(waterway)
+                continue
+            # if waterway belongs to the river, add the whole river
+            if waterway in self.waterway_to_river:
+                river_id = self.waterway_to_river.fast_get(waterway)
+                for ww in self.river_to_waterways.fast_get(river_id):
+                    if ww == waterway:
+                        continue
+                    if ww in open or ww in closed:
+                        continue
+                    open.add(ww)
+            
+            for node in self.waterway_to_nodes.fast_get(waterway):
                 # only add nodes that have more than one waterway
                 if node not in self.node_to_waterways:
                     continue
                 for adjacent_river in self.node_to_waterways.fast_get(node):
                 # for adjacent_river in self.node_to_waterways[node]:
-                    if adjacent_river == river:
+                    if adjacent_river == waterway:
                         continue
                     if adjacent_river in closed or adjacent_river in open:
                         continue
                     open.add(adjacent_river)
-            closed.add(river)
-            self.waterway_to_confluence[river] = self.confluence_id_counter
+            closed.add(waterway)
+            self.waterway_to_confluence[waterway] = self.confluence_id_counter
 
         self.confluences[self.confluence_id_counter] = list(closed)
         self.write_confluence(w.id, self.confluence_id_counter)
@@ -206,6 +229,7 @@ def test():
         print("Processing nodes")
         intersections.apply_file(osm_file)
         # intersections.apply_file("./sources/slovenia-latest.osm.pbf")
+        intersections.clear_redundant_nodes()
 
         waterways = WaterwaysHandler(intersections.node_to_waterways)
         print("Processing ways")
@@ -234,7 +258,7 @@ def test():
         river_to_local_confluence = local_confluence_handler.river_to_local_confluence
 
         with open(CSV_FILE, "w") as csv:
-            confluence = ConfluenceHandler(node_to_waterways, waterway_to_nodes, csv)
+            confluence = ConfluenceHandler(node_to_waterways, waterway_to_nodes, csv, waterway_to_river, river_to_waterways)
             print("Calculating global confluences")
             confluence.apply_file(osm_file)
             # confluence.apply_file("./sources/slovenia-latest.osm.pbf")
@@ -287,6 +311,9 @@ def write():
         print(f" {i + 1}/{len(files)}", end="\r")
         intersections.apply_file(osm_file)
     
+    # reduce the size of the nodes file
+    intersections.clear_redundant_nodes()
+    
     # waterways
     waterways = WaterwaysHandler(intersections.node_to_waterways)
     print("Processing ways")
@@ -318,7 +345,7 @@ def write():
 
     # global confluences
     with open(CSV_FILE, "w") as csv:
-        confluence = ConfluenceHandler(node_to_waterways, waterway_to_nodes, csv)
+        confluence = ConfluenceHandler(node_to_waterways, waterway_to_nodes, csv, waterway_to_river, river_to_waterways)
         print("Calculating global confluences")
         for i, osm_file in enumerate(files):
             print(f" {i + 1}/{len(files)}", end="\r")
