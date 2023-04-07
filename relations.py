@@ -82,7 +82,7 @@ def local_confluence(waterway_id, node_to_waterways, waterway_to_nodes,
     while len(open_waterways):
         waterway = open_waterways.pop()
 
-        # this if only happens when only parts of the world are generated
+        # this only happens when only parts of the world are generated
         # and the river exceeds the borders
         if waterway not in waterway_to_nodes:
             closed_waterways.add(waterway)

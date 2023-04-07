@@ -1,22 +1,20 @@
 import os, os.path
 from sqlite3 import dbapi2 as sqlite
 import json
-import time
 
-# TODO waay to much db access
 # code modified from: http://sebsauvage.net/python/snyppets/index.html#dbdict
 
 class dbdict():
    
-    def __init__(self, path, max_elements=10000):
-        self.db_filename = path
+    def __init__(self, path, max_elements=10000, check_same_thread=True):
+        self.db_filename = "dict_db_" + path + ".sqlite"
         self._write_dict = dict()
         self.max_elements = max_elements
         if not os.path.isfile(self.db_filename):
-            self.con = sqlite.connect(self.db_filename)
+            self.con = sqlite.connect(self.db_filename, check_same_thread=check_same_thread)
             self.con.execute("create table data (key PRIMARY KEY,value)")
         else:
-            self.con = sqlite.connect(self.db_filename)
+            self.con = sqlite.connect(self.db_filename, check_same_thread=check_same_thread)
         
 
     def __getitem__(self, key):
@@ -81,12 +79,6 @@ class dbdict():
             self.con.commit()
         if not exists:
              raise KeyError
-    
-
-    # TODO
-    def clear_waterway_nodes(self):
-        # clear waterway nodes that only contain a single element in the array for the value
-        ...
 
             
     def keys(self):
