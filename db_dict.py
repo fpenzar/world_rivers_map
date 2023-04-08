@@ -85,10 +85,7 @@ class dbdict():
     def clear_redundant_nodes(self):
         # delete all nodes with only a single waterway connected with them
         self.flush()
-        rows = self.con.execute("select key, value from data").fetchall()
-        for key, value in rows:
-            if len(json.loads(value)) == 1:
-                self.con.execute("delete from data where key=?", (key,))
+        self.con.execute("delete from data where json_array_length(value) = 1")
         self.con.commit()
         self.con.execute("VACUUM")
 
