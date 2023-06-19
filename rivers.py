@@ -327,23 +327,28 @@ def write(skip_nodes=False):
 
         node_to_waterways = intersections.node_to_waterways
         waterway_to_nodes = waterways.waterway_to_nodes
-    else:
-        node_to_waterways = dbdict("node_to_waterways", MAX)
-        waterway_to_nodes = dbdict("waterway_to_nodes", MAX)
-    
-    # rivers
-    rivers = RiverHandler(waterway_to_nodes)
-    print("Processing relations")
-    for i, osm_file in enumerate(files):
-        print(f" {i + 1}/{len(files)}", end="\r")
-        rivers.apply_file(osm_file)
-    
-
-    waterway_to_river = rivers.waterway_to_river
-    river_to_waterways = rivers.river_to_waterways
+        # rivers
+        rivers = RiverHandler(waterway_to_nodes)
+        print("Processing relations")
+        for i, osm_file in enumerate(files):
+            print(f" {i + 1}/{len(files)}", end="\r")
+            rivers.apply_file(osm_file)
+        waterway_to_river = rivers.waterway_to_river
+        river_to_waterways = rivers.river_to_waterways
 
     node_to_waterways = dbdict("node_to_waterways", MAX)
     waterway_to_nodes = dbdict("waterway_to_nodes", MAX)
+    waterway_to_river = dbdict("waterway_to_river", MAX)
+    river_to_waterways = dbdict("river_to_waterways", MAX)
+
+    # global confluences
+    with open(CSV_FILE, "w") as csv:
+        confluence = ConfluenceHandler(node_to_waterways, waterway_to_nodes, csv, waterway_to_river, river_to_waterways)
+        print("Calculating global confluences")
+        for i, osm_file in enumerate(files):
+            print(f" {i + 1}/{len(files)}", end="\r")
+            confluence.apply_file(osm_file)
+
 
     # local confluences
     local_confluence_handler = LocalConfluenceHandler(node_to_waterways, waterway_to_nodes, waterway_to_river, river_to_waterways)
@@ -353,19 +358,11 @@ def write(skip_nodes=False):
         local_confluence_handler.apply_file(osm_file)
     river_to_local_confluence = local_confluence_handler.river_to_local_confluence
 
-
-    # global confluences
-    with open(CSV_FILE, "w") as csv:
-        confluence = ConfluenceHandler(node_to_waterways, waterway_to_nodes, csv, waterway_to_river, river_to_waterways)
-        print("Calculating global confluences")
-        for i, osm_file in enumerate(files):
-            print(f" {i + 1}/{len(files)}", end="\r")
-            confluence.apply_file(osm_file)
     
     end = time.time()
     print(f"Took {end - start} s for parsing data")
 
 
 if __name__ == "__main__":
-    write()
+    write(True)
     # test()

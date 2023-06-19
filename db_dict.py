@@ -13,7 +13,7 @@ class dbdict():
         self.max_elements = max_elements
         if not os.path.isfile(self.db_filename):
             self.con = sqlite.connect(self.db_filename, check_same_thread=check_same_thread)
-            self.con.execute("create table data (key PRIMARY KEY integer, value text)")
+            self.con.execute("create table data (key PRIMARY KEY, value)")
         else:
             self.con = sqlite.connect(self.db_filename, check_same_thread=check_same_thread)
         

@@ -4,7 +4,7 @@ OSM_FILE = f"{PREFIX}/sources/{FILE}.pbf"
 CSV_FILE = f"{PREFIX}/confluences.csv"
 CSV_FOLDER = f"{PREFIX}/csv"
 
-CLASSES = ["river", "stream", "canal"]
+CLASSES = ["river", "stream"]
 
 
 MAX = 1000
