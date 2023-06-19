@@ -7,23 +7,12 @@ from pymbtiles import MBtiles
 from fastapi.middleware.cors import CORSMiddleware
 from functools import lru_cache
 
-# uvicorn server:app --reload
+# allow access from machines in the local network
+# uvicorn server:app --reload --host 0.0.0.0
 # http://127.0.0.1:8000/docs
 
 app = FastAPI()
 
-# origins = [
-#     "http://localhost",
-#     "http://localhost:8080",
-# ]
-
-# app.add_middleware(
-#     CORSMiddleware,
-#     allow_origins=origins,
-#     allow_credentials=True,
-#     allow_methods=["*"],
-#     allow_headers=["*"],
-# )
 
 node_to_waterways = dbdict("node_to_waterways", MAX, check_same_thread=False)
 waterway_to_nodes = dbdict("waterway_to_nodes", MAX, check_same_thread=False)
