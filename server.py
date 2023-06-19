@@ -6,6 +6,7 @@ import json
 from pymbtiles import MBtiles
 from fastapi.middleware.cors import CORSMiddleware
 from functools import lru_cache
+from datetime import datetime, timedelta
 
 # allow access from machines in the local network
 # uvicorn server:app --reload --host 0.0.0.0
@@ -52,7 +53,10 @@ def get_data(z, x, y):
     with MBtiles('/home/geolux/tiles/tilemaker/world_v5.mbtiles') as src:
         tile_data = src.read_tile(z, x, inverted_y)
 
-    headers = {"Content-Encoding": "gzip", "Access-Control-Allow-Origin": "*"}
+    expires_datetime = datetime.utcnow() + timedelta(days=7)
+    expires_str = expires_datetime.strftime("%a, %d %b %Y %H:%M:%S GMT")
+    headers = {"Content-Encoding": "gzip", "Access-Control-Allow-Origin": "*", "Expires": expires_str}
+
     return responses.Response(content=tile_data, media_type="application/x-protobuf", headers=headers)
 
 
@@ -61,3 +65,8 @@ def get_json_style():
     with open("style.json", "r") as file:
         json_file = json.loads(file.read())
     return json_file
+
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", reload=True)
