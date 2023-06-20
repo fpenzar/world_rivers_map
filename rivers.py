@@ -21,7 +21,7 @@ class IntersectionsHandler(osmium.SimpleHandler):
     def __init__(self):
         osmium.SimpleHandler.__init__(self)
         # key=node_id, value=list(waterway_ids the node is present in)
-        self.node_to_waterways = dbdict("node_to_waterways", MAX)
+        self.node_to_waterways = dbdict(DICT_DB_FOLDER, "node_to_waterways", MAX)
 
         self.processed = 0
 
@@ -48,7 +48,7 @@ class WaterwaysHandler(osmium.SimpleHandler):
         # key=node_id, value=list(waterway_ids the node is present in)
         self.node_to_waterways = node_to_waterways
         # key=waterway_id, value=[start_node_id, intersection_node_1, intersection_node_2, ..., end_node_id]
-        self.waterway_to_nodes = dbdict("waterway_to_nodes", MAX)
+        self.waterway_to_nodes = dbdict(DICT_DB_FOLDER, "waterway_to_nodes", MAX)
         self.processed = 0
 
 
@@ -78,9 +78,9 @@ class RiverHandler(osmium.SimpleHandler):
         osmium.SimpleHandler.__init__(self)
         self.waterway_to_nodes = waterway_to_nodes
         # key=waterway_id, value=river_id
-        self.waterway_to_river = dbdict("waterway_to_river", MAX)
+        self.waterway_to_river = dbdict(DICT_DB_FOLDER, "waterway_to_river", MAX)
         # key=river_id, value=[ww_id1, ww_id2, ..., ww_id3]
-        self.river_to_waterways = dbdict("river_to_waterways", MAX)
+        self.river_to_waterways = dbdict(DICT_DB_FOLDER, "river_to_waterways", MAX)
         self.processed = 0
     
 
@@ -115,9 +115,9 @@ class ConfluenceHandler(osmium.SimpleHandler):
         # key=waterway_id, value=[start_node_id, intersection_node_1, intersection_node_2, ..., end_node_id]
         self.waterway_to_nodes = waterway_to_nodes
         # key=id (from 0 upwards), value=list(waterway ids that are in the confluence)
-        self.confluences = dbdict("confluences", MAX)
+        self.confluences = dbdict(DICT_DB_FOLDER, "confluences", MAX)
         # key=waterway_id, value=confluence_id
-        self.waterway_to_confluence = dbdict("waterway_to_confluence", MAX)
+        self.waterway_to_confluence = dbdict(DICT_DB_FOLDER, "waterway_to_confluence", MAX)
         # confluence counter
         self.confluence_id_counter = 0
 
@@ -192,7 +192,7 @@ class LocalConfluenceHandler(osmium.SimpleHandler):
         self.river_to_waterways = river_to_waterways
 
         # key=river_id, value=[local_confluence_w1, local_confluence_w2, ..., local_confluence_wn]
-        self.river_to_local_confluence = dbdict("river_to_local_confluence", MAX)
+        self.river_to_local_confluence = dbdict(DICT_DB_FOLDER, "river_to_local_confluence", MAX)
 
         # for stats
         self.processed = 0
@@ -270,11 +270,11 @@ def test():
         print(f"Took {end - start} s for parsing data from {osm_file}")
 
     else:
-        node_to_waterways = dbdict("node_to_waterways", MAX)
-        waterway_to_nodes = dbdict("waterway_to_nodes", MAX)
-        waterway_to_river = dbdict("waterway_to_river", MAX)
-        river_to_waterways = dbdict("river_to_waterways", MAX)
-        river_to_local_confluence = dbdict("river_to_local_confluence", MAX)
+        node_to_waterways = dbdict(DICT_DB_FOLDER, "node_to_waterways", MAX)
+        waterway_to_nodes = dbdict(DICT_DB_FOLDER, "waterway_to_nodes", MAX)
+        waterway_to_river = dbdict(DICT_DB_FOLDER, "waterway_to_river", MAX)
+        river_to_waterways = dbdict(DICT_DB_FOLDER, "river_to_waterways", MAX)
+        river_to_local_confluence = dbdict(DICT_DB_FOLDER, "river_to_local_confluence", MAX)
 
 
     river_id = 350935692 # Bračana
@@ -336,10 +336,10 @@ def write(skip_nodes=False):
         waterway_to_river = rivers.waterway_to_river
         river_to_waterways = rivers.river_to_waterways
 
-    node_to_waterways = dbdict("node_to_waterways", MAX)
-    waterway_to_nodes = dbdict("waterway_to_nodes", MAX)
-    waterway_to_river = dbdict("waterway_to_river", MAX)
-    river_to_waterways = dbdict("river_to_waterways", MAX)
+    node_to_waterways = dbdict(DICT_DB_FOLDER, "node_to_waterways", MAX)
+    waterway_to_nodes = dbdict(DICT_DB_FOLDER, "waterway_to_nodes", MAX)
+    waterway_to_river = dbdict(DICT_DB_FOLDER, "waterway_to_river", MAX)
+    river_to_waterways = dbdict(DICT_DB_FOLDER, "river_to_waterways", MAX)
 
     # global confluences
     with open(CSV_FILE, "w") as csv:

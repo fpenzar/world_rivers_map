@@ -7,8 +7,8 @@ from consts import *
 
 class dbdict():
    
-    def __init__(self, path, max_elements=10000, check_same_thread=True):
-        self.db_filename = f"{PREFIX}/dict_db_" + path + ".sqlite"
+    def __init__(self, folder, name, max_elements=10000, check_same_thread=True):
+        self.db_filename = os.path.join(folder, f"dict_db_{name}.sqlite")
         self._write_dict = dict()
         self.max_elements = max_elements
         if not os.path.isfile(self.db_filename):
