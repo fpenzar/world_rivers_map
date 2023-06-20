@@ -3,5 +3,5 @@
     "mbtiles_path": "/home/geolux/tiles/tilemaker/world_v5.mbtiles",
     "port": 8000,
     "style_path": "/home/geolux/tiles/world_rivers_map/style.json",
-    "dict_db_folder": "/home/geolux/tiles/world_rivers_map"
+    "dict_db_folder": "/home/geolux/tiles/world_rivers_map/data"
 }

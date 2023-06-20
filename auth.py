@@ -1,7 +1,5 @@
 import pyotp
 
-SECRET = "6ELOVKWIFIUU6BQCWQOS5JOU4F5RVGNC"
-
 
 class TOTP_manager:
 
@@ -9,5 +7,7 @@ class TOTP_manager:
         self.secret = secret
     
     def verify(self, token):
-        totp = pyotp.TOTP(self.secret, interval=60)
+        # digest is SHA1
+        # validity is 4 minutes
+        totp = pyotp.TOTP(self.secret, interval=4*60, digits=6)
         return totp.verify(token)
