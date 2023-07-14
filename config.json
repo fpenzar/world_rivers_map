@@ -1,7 +1,7 @@
 {
-    "secret": "6ELOVKWIFIUU6BQCWQOS5JOU4F5RVGNC",
-    "mbtiles_path": "/home/geolux/tiles/tilemaker/world_v5.mbtiles",
+    "secret": "base32totpsecret",
+    "mbtiles_path": "world_rivers.mbtiles",
     "port": 8000,
-    "style_path": "/home/geolux/tiles/world_rivers_map/style.json",
-    "dict_db_folder": "/home/geolux/tiles/world_rivers_map/data"
+    "style_path": "./style.json",
+    "dict_db_folder": "./data"
 }

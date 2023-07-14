@@ -1,5 +1,5 @@
 FILE = "croatia-latest.osm"
-PREFIX = "/home/geolux/tiles/world_rivers_map"
+PREFIX = "."
 OSM_FILE = f"{PREFIX}/sources/{FILE}.pbf"
 CSV_FILE = f"{PREFIX}/confluences.csv"
 CSV_FOLDER = f"{PREFIX}/csv"

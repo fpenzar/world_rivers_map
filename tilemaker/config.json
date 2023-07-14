@@ -1,0 +1,40 @@
+{
+	"layers": {
+        "aerodrome_label":   { "minzoom": 11, "maxzoom": 14 },
+        "aeroway":           { "minzoom": 12, "maxzoom": 14 },
+        "boundary":         { "minzoom":  0, "maxzoom": 14, "simplify_below": 12, "simplify_level": 0.0003, "simplify_ratio": 2 },
+        "landcover":         { "minzoom":  0, "maxzoom": 14, "simplify_below": 13, "simplify_level": 0.0003, "simplify_ratio": 2, "combine_polygons_below": 10 },
+        "landuse":           { "minzoom":  0, "maxzoom": 14, "simplify_below": 13, "simplify_level": 0.0003, "simplify_ratio": 2 },
+        "mountain_peak":     { "minzoom": 12, "maxzoom": 14 },
+        "park":              { "minzoom": 11, "maxzoom": 14 },
+		"place":            { "minzoom":  0, "maxzoom": 14 },
+        "transportation":             { "minzoom": 8,  "maxzoom": 14, "simplify_below": 13, "simplify_level": 0.0003 },
+		"transportation_name":        { "minzoom": 8,  "maxzoom": 14 },
+        "transportation_name_mid":    { "minzoom": 0, "maxzoom": 14, "write_to": "transportation_name" },
+		"transportation_name_detail": { "minzoom": 0, "maxzoom": 14, "write_to": "transportation_name" },
+
+        "water":             { "minzoom": 0,  "maxzoom": 14, "simplify_below": 12, "simplify_level": 0.0003, "simplify_ratio": 2},
+		"waterway":         { "minzoom":  4,  "maxzoom": 14, "simplify_below": 12, "simplify_level": 0.0003, "simplify_ratio": 2 },
+		"waterway_detail":  { "minzoom": 10,  "maxzoom": 14, "write_to": "waterway" }
+
+	},
+	"settings": {
+		"minzoom": 0,
+		"maxzoom": 14,
+		"basezoom": 14,
+		"include_ids": true,
+		"combine_below": 14,
+		"name": "Tilemaker to OpenMapTiles schema",
+		"version": "3.0",
+		"description": "Tile config based on OpenMapTiles schema",
+		"compress": "gzip",
+		"filemetadata": {
+			"tilejson": "2.0.0", 
+			"scheme": "xyz", 
+			"type": "baselayer", 
+			"format": "pbf", 
+            "tiles": ["https://example.com/liechtenstein/{z}/{x}/{y}.pbf"]
+		}
+	}
+}
+
